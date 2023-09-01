@@ -1,7 +1,11 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import useAuth from "./useAuth";
 import "bootstrap/dist/css/bootstrap.min.css";
 import SpotifyWebApi from "spotify-web-api-node";
+import TopArtist from "./pages/topArtists";
+import TopSong from "./pages/topSongs";
+import RecommendedTrack from "./pages/reccomendedTracks";
+import generateSongRecc from "./chat.js";
 
 const spotifyApi = new SpotifyWebApi({
   clientId: "8b945ef10ea24755b83ac50cede405a0",
@@ -15,8 +19,9 @@ export default function Dashboard({ code }) {
   const [seedTracks, setSeedTracks] = useState([]);
   const [reccomendations, setReccomendations] = useState([]);
   const [playlist, setPlaylist] = useState(false);
-  //GEtting top songs and top artists ->SPOTIFY WRAPPED
+  const [userDetails, setUserDetails] = useState([]);
   useEffect(() => {
+    //Top Artists
     if (accessToken) {
       spotifyApi
         .getMyTopArtists({ limit: 5 })
@@ -26,26 +31,32 @@ export default function Dashboard({ code }) {
         .catch((err) => {
           console.log("Something went wrong!", err);
         });
-
+      //Top Songs
       spotifyApi
-        .getMyTopTracks({ limit: 5 })
+        .getMyTopTracks({ limit: 20 })
         .then((data) => {
+          const topSongs = data.body.items;
+          const userTopDetails = topSongs.map((track, index) => ({
+            artistName:
+              track.artists.map((artist) => artist.name).join(", ") || "",
+            songName: track.name || "",
+          }));
+          console.log("User Top Details", userTopDetails);
+
+          // Set the user details state
+          setUserDetails(userTopDetails);
           setTopSongs(data.body.items);
           setSeedTracks(data.body.items.map((track) => track.id));
+
+          console.log("SetUserDetails", userDetails);
         })
         .catch((err) => {
           console.log("Something went wrong!", err);
         });
     }
-  }, [accessToken]);
-  //Formatting milliseconds to seconds
-  const formatDuration = (milliseconds) => {
-    const date = new Date(milliseconds);
-    const minutes = date.getUTCMinutes();
-    const seconds = date.getUTCSeconds();
-    return `${minutes}:${seconds < 10 ? "0" : ""}${seconds}`;
-  };
-  //Generate custom playlist based on top songs listened
+  }, [accessToken, userDetails.length]);
+
+  //new Playlist based on top songs using SPOTIFY
   const getReccomendedPlaylist = () => {
     setPlaylist(true);
     if (accessToken) {
@@ -76,43 +87,43 @@ export default function Dashboard({ code }) {
       });
     }
   };
-
+  const chatrecc = () => {
+    console.log(userDetails);
+    generateSongRecc(userDetails).then((reccomendations) => {
+      console.log(reccomendations);
+    });
+  };
+  const fetchUserPlaylist = () => {
+    if (accessToken) {
+      const userPlaylists = [];
+      spotifyApi
+        .getUserPlaylists()
+        .then((data) => {
+          const playlists = data.body.items;
+          userPlaylists.push(data.body.id);
+        })
+        .catch((error) => {
+          console.error("Error fetching your playlists:", error);
+        });
+    }
+  };
   return (
     <div className="container">
+      {/* Top Artists */}
       <h2 className="text-center">Top Artists</h2>
       <div className="card-group">
         <div className="row justify-content-center">
           {topArtists.map((artist) => (
-            <div key={artist.id} className="col-lg-2 mb-4">
-              <div className="card h-100 d-flex align-items-center text-center">
-                <img
-                  src={artist.images[0]?.url}
-                  className="card-img-top img-fluid"
-                  alt={artist.name}
-                />
-                <div className="card-body">
-                  <h5 className="card-title">{artist.name}</h5>
-                </div>
-              </div>
-            </div>
+            <TopArtist key={artist.id} artist={artist} />
           ))}
         </div>
       </div>
+
+      {/* Top Songs */}
       <h2 className="text-center">Top Songs</h2>
       <div className="row justify-content-center">
-        {topSongs.map((song) => (
-          <div key={song.id} className="col-lg-2 mb-4">
-            <div className="card h-100 d-flex align-items-center text-center">
-              <img
-                src={song.album.images[0]?.url}
-                className="card-img-top img-fluid"
-                alt={song.name}
-              />
-              <div className="card-body">
-                <h5 className="card-title">{song.name}</h5>
-              </div>
-            </div>
-          </div>
+        {topSongs.slice(0, 5).map((song) => (
+          <TopSong key={song.id} song={song} />
         ))}
       </div>
 
@@ -124,23 +135,17 @@ export default function Dashboard({ code }) {
       {playlist && reccomendations.length > 0 && (
         <div>
           <h2 className="text-center">Curated Playlist</h2>
-          <div className="row justify-content-center">
+          <ul className="list-group list-group-horizontal overflow-x-auto">
             {reccomendations.map((track, index) => (
-              <div key={index} className="col-lg-3 mb-4">
-                <div className="card h-100 d-flex align-items-center text-center">
-                  <div className="card-body">
-                    <h5 className="card-title">{track.name}</h5>
-                    <p className="card-text">{track.artist}</p>
-                    <p className="card-text">
-                      {formatDuration(track.duration_ms)}
-                    </p>
-                  </div>
-                </div>
-              </div>
+              <RecommendedTrack key={index} track={track} />
             ))}
-          </div>
+          </ul>
         </div>
       )}
+
+      <div>
+        <button onClick={chatrecc}>Get My Playlists</button>
+      </div>
     </div>
   );
 }
