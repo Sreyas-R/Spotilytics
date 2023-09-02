@@ -5,8 +5,9 @@ import SpotifyWebApi from "spotify-web-api-node";
 import TopArtist from "./pages/topArtists";
 import TopSong from "./pages/topSongs";
 import RecommendedTrack from "./pages/reccomendedTracks";
-import generateSongRecc from "./chat.js";
-
+import { generateSongRecc, generateSongInsights } from "./chat.js";
+import AIReccomended from "./pages/aiReccomended";
+import AIInsights from "./pages/aiInsights";
 const spotifyApi = new SpotifyWebApi({
   clientId: "8b945ef10ea24755b83ac50cede405a0",
 });
@@ -19,6 +20,11 @@ export default function Dashboard({ code }) {
   const [seedTracks, setSeedTracks] = useState([]);
   const [reccomendations, setReccomendations] = useState([]);
   const [playlist, setPlaylist] = useState(false);
+  const [aiplaylist, setaiplaylist] = useState(false);
+  const [aiRecommendations, setAiRecommendations] = useState([]);
+  const [aiRemarks, setAiRemarks] = useState("");
+
+  const [aisecond, setAiSecond] = useState(false);
   const [userDetails, setUserDetails] = useState([]);
   useEffect(() => {
     //Top Artists
@@ -54,6 +60,7 @@ export default function Dashboard({ code }) {
           console.log("Something went wrong!", err);
         });
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [accessToken, userDetails.length]);
 
   //new Playlist based on top songs using SPOTIFY
@@ -87,26 +94,46 @@ export default function Dashboard({ code }) {
       });
     }
   };
+
+  //Open AI to get users top reccomendations based on CHATGPT
   const chatrecc = () => {
-    console.log(userDetails);
-    generateSongRecc(userDetails).then((reccomendations) => {
-      console.log(reccomendations);
-    });
+    generateSongRecc(userDetails)
+      .then((recommendations) => {
+        setAiRecommendations(recommendations); // Set the AI recommendations in the state
+        setaiplaylist(true); // Set aiplaylist to true to trigger rendering of AIReccomended component
+      })
+      .catch((error) => {
+        console.error("Error generating AI recommendations:", error);
+      });
   };
-  const fetchUserPlaylist = () => {
-    if (accessToken) {
-      const userPlaylists = [];
-      spotifyApi
-        .getUserPlaylists()
-        .then((data) => {
-          const playlists = data.body.items;
-          userPlaylists.push(data.body.id);
-        })
-        .catch((error) => {
-          console.error("Error fetching your playlists:", error);
-        });
-    }
+
+  // Open Ai to get Insights into playlist
+  const chatInsights = () => {
+    generateSongInsights(userDetails)
+      .then((insights) => {
+        console.log(insights);
+        setAiRemarks(insights); // Set the AI insights as a string in the state
+        setAiSecond(true); // Set aisecond to true to trigger rendering of AIInsights component
+      })
+      .catch((error) => {
+        console.error("Error generating AI insights:", error);
+      });
   };
+
+  // const fetchUserPlaylist = () => {
+  //   if (accessToken) {
+  //     const userPlaylists = [];
+  //     spotifyApi
+  //       .getUserPlaylists()
+  //       .then((data) => {
+  //         const playlists = data.body.items;
+  //         userPlaylists.push(data.body.id);
+  //       })
+  //       .catch((error) => {
+  //         console.error("Error fetching your playlists:", error);
+  //       });
+  //   }
+  // };
   return (
     <div className="container">
       {/* Top Artists */}
@@ -129,7 +156,7 @@ export default function Dashboard({ code }) {
 
       <div>
         <button onClick={getReccomendedPlaylist}>Curate New Playlist</button>
-        <p>Create a new playlist based on your top songs!</p>
+        <p>Create a new playlist based on your top songs using Spotify!</p>
       </div>
 
       {playlist && reccomendations.length > 0 && (
@@ -144,7 +171,13 @@ export default function Dashboard({ code }) {
       )}
 
       <div>
-        <button onClick={chatrecc}>Get My Playlists</button>
+        <button onClick={chatrecc}>Use AI to curate a playlist for you!</button>
+        {aiplaylist && <AIReccomended chatlog={aiRecommendations} />}
+      </div>
+
+      <div>
+        <button onClick={chatInsights}>Get Insights of your music taste</button>
+        {aisecond && <AIInsights chatlog={aiRemarks} />}
       </div>
     </div>
   );
