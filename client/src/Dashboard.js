@@ -1,67 +1,34 @@
-import React, { useState, useEffect } from "react";
+// Dashboard.js
+import React, { useState } from "react";
 import useAuth from "./useAuth";
 import "bootstrap/dist/css/bootstrap.min.css";
 import SpotifyWebApi from "spotify-web-api-node";
-import TopArtist from "./pages/topArtists";
-import TopSong from "./pages/topSongs";
+import TopArtists from "./TopArtists";
+import TopSongs from "./TopSongs";
 import RecommendedTrack from "./pages/reccomendedTracks";
-import generateSongRecc from "./chat.js";
-
+import AIReccomended from "./pages/aiReccomended";
+import AIInsights from "./pages/aiInsights";
+import { generateSongRecc, generateSongInsights } from "./chat.js";
 const spotifyApi = new SpotifyWebApi({
   clientId: "8b945ef10ea24755b83ac50cede405a0",
 });
-
-export default function Dashboard({ code }) {
+const Dashboard = ({ code }) => {
   const accessToken = useAuth(code);
   if (accessToken) spotifyApi.setAccessToken(accessToken);
-  const [topArtists, setTopArtists] = useState([]);
-  const [topSongs, setTopSongs] = useState([]);
-  const [seedTracks, setSeedTracks] = useState([]);
+  const seedTracks = [];
   const [reccomendations, setReccomendations] = useState([]);
   const [playlist, setPlaylist] = useState(false);
+  const [aiplaylist, setaiplaylist] = useState(false);
+  const [aiRecommendations, setAiRecommendations] = useState([]);
+  const [aiRemarks, setAiRemarks] = useState("");
+  const [aisecond, setAiSecond] = useState(false);
   const [userDetails, setUserDetails] = useState([]);
-  useEffect(() => {
-    //Top Artists
-    if (accessToken) {
-      spotifyApi
-        .getMyTopArtists({ limit: 5 })
-        .then((data) => {
-          setTopArtists(data.body.items);
-        })
-        .catch((err) => {
-          console.log("Something went wrong!", err);
-        });
-      //Top Songs
-      spotifyApi
-        .getMyTopTracks({ limit: 20 })
-        .then((data) => {
-          const topSongs = data.body.items;
-          const userTopDetails = topSongs.map((track, index) => ({
-            artistName:
-              track.artists.map((artist) => artist.name).join(", ") || "",
-            songName: track.name || "",
-          }));
-          console.log("User Top Details", userTopDetails);
 
-          // Set the user details state
-          setUserDetails(userTopDetails);
-          setTopSongs(data.body.items);
-          setSeedTracks(data.body.items.map((track) => track.id));
-
-          console.log("SetUserDetails", userDetails);
-        })
-        .catch((err) => {
-          console.log("Something went wrong!", err);
-        });
-    }
-  }, [accessToken, userDetails.length]);
-
-  //new Playlist based on top songs using SPOTIFY
   const getReccomendedPlaylist = () => {
     setPlaylist(true);
     if (accessToken) {
       const recommendedTracks = [];
-
+      console.log(seedTracks);
       seedTracks.forEach((seedTrack) => {
         spotifyApi
           .getRecommendations({
@@ -87,49 +54,43 @@ export default function Dashboard({ code }) {
       });
     }
   };
+
   const chatrecc = () => {
-    console.log(userDetails);
-    generateSongRecc(userDetails).then((reccomendations) => {
-      console.log(reccomendations);
-    });
+    generateSongRecc(userDetails)
+      .then((recommendations) => {
+        setAiRecommendations(recommendations);
+        setaiplaylist(true);
+      })
+      .catch((error) => {
+        console.error("Error generating AI recommendations:", error);
+      });
   };
-  const fetchUserPlaylist = () => {
-    if (accessToken) {
-      const userPlaylists = [];
-      spotifyApi
-        .getUserPlaylists()
-        .then((data) => {
-          const playlists = data.body.items;
-          userPlaylists.push(data.body.id);
-        })
-        .catch((error) => {
-          console.error("Error fetching your playlists:", error);
-        });
-    }
+
+  const chatInsights = () => {
+    generateSongInsights(userDetails)
+      .then((insights) => {
+        setAiRemarks(insights);
+        setAiSecond(true);
+      })
+      .catch((error) => {
+        console.error("Error generating AI insights:", error);
+      });
   };
+
   return (
     <div className="container">
-      {/* Top Artists */}
-      <h2 className="text-center">Top Artists</h2>
-      <div className="card-group">
-        <div className="row justify-content-center">
-          {topArtists.map((artist) => (
-            <TopArtist key={artist.id} artist={artist} />
-          ))}
-        </div>
-      </div>
+      <TopArtists accessToken={accessToken} />
 
-      {/* Top Songs */}
-      <h2 className="text-center">Top Songs</h2>
-      <div className="row justify-content-center">
-        {topSongs.slice(0, 5).map((song) => (
-          <TopSong key={song.id} song={song} />
-        ))}
-      </div>
+      <TopSongs
+        accessToken={accessToken}
+        seedTracks={seedTracks}
+        userDetails={userDetails}
+        setUserDetails={setUserDetails}
+      />
 
       <div>
         <button onClick={getReccomendedPlaylist}>Curate New Playlist</button>
-        <p>Create a new playlist based on your top songs!</p>
+        <p>Create a new playlist based on your top songs using Spotify!</p>
       </div>
 
       {playlist && reccomendations.length > 0 && (
@@ -144,8 +105,16 @@ export default function Dashboard({ code }) {
       )}
 
       <div>
-        <button onClick={chatrecc}>Get My Playlists</button>
+        <button onClick={chatrecc}>Use AI to curate a playlist for you!</button>
+        {aiplaylist && <AIReccomended chatlog={aiRecommendations} />}
+      </div>
+
+      <div>
+        <button onClick={chatInsights}>Get Insights of your music taste</button>
+        {aisecond && <AIInsights chatlog={aiRemarks} />}
       </div>
     </div>
   );
-}
+};
+
+export default Dashboard;
