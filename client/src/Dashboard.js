@@ -9,12 +9,10 @@ import RecommendedTrack from "./pages/reccomendedTracks";
 import AIReccomended from "./pages/aiReccomended";
 import AIInsights from "./pages/aiInsights";
 import { generateSongRecc, generateSongInsights } from "./chat.js";
-import { generateSongRecc, generateSongInsights } from "./chat.js";
-import AIReccomended from "./pages/aiReccomended";
-import AIInsights from "./pages/aiInsights";
 const spotifyApi = new SpotifyWebApi({
   clientId: "8b945ef10ea24755b83ac50cede405a0",
 });
+//HI
 const Dashboard = ({ code }) => {
   const accessToken = useAuth(code);
   if (accessToken) spotifyApi.setAccessToken(accessToken);
