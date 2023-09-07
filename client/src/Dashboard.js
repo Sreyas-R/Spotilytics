@@ -1,4 +1,3 @@
-// Dashboard.js
 import React, { useState } from "react";
 import useAuth from "./useAuth";
 import "bootstrap/dist/css/bootstrap.min.css";
@@ -6,17 +5,20 @@ import SpotifyWebApi from "spotify-web-api-node";
 import TopArtists from "./TopArtists";
 import TopSongs from "./TopSongs";
 import RecommendedTrack from "./pages/reccomendedTracks";
-import AIReccomended from "./pages/aiReccomended";
+import AIRecommended from "./pages/aiReccomended";
 import AIInsights from "./pages/aiInsights";
 import { generateSongRecc, generateSongInsights } from "./chat.js";
+import { Container, Button } from "react-bootstrap";
+import "./App.css";
 const spotifyApi = new SpotifyWebApi({
   clientId: "8b945ef10ea24755b83ac50cede405a0",
 });
-//HI
+
 const Dashboard = ({ code }) => {
   const accessToken = useAuth(code);
   if (accessToken) spotifyApi.setAccessToken(accessToken);
-  const seedTracks = [];
+
+  const [seedTracks, setSeedTracks] = useState([]);
   const [reccomendations, setReccomendations] = useState([]);
   const [playlist, setPlaylist] = useState(false);
   const [aiplaylist, setaiplaylist] = useState(false);
@@ -24,8 +26,9 @@ const Dashboard = ({ code }) => {
   const [aiRemarks, setAiRemarks] = useState("");
   const [aisecond, setAiSecond] = useState(false);
   const [userDetails, setUserDetails] = useState([]);
+  const [showArtists, setShowArtists] = useState(true); // Add state for showing top artists or top songs
 
-  const getReccomendedPlaylist = () => {
+  const getRecommendedPlaylist = () => {
     setPlaylist(true);
     if (accessToken) {
       const recommendedTracks = [];
@@ -56,7 +59,7 @@ const Dashboard = ({ code }) => {
     }
   };
 
-  const chatrecc = () => {
+  const chatRecc = () => {
     generateSongRecc(userDetails)
       .then((recommendations) => {
         setAiRecommendations(recommendations);
@@ -78,43 +81,65 @@ const Dashboard = ({ code }) => {
       });
   };
 
+  const toggleShowArtists = () => {
+    setShowArtists(!showArtists);
+  };
+
+  const backgroundStyle = {
+    minHeight: "100vh",
+    backgroundColor: "#121212",
+  };
+
   return (
-    <div className="container">
-      <TopArtists accessToken={accessToken} />
-
-      <TopSongs
-        accessToken={accessToken}
-        seedTracks={seedTracks}
-        userDetails={userDetails}
-        setUserDetails={setUserDetails}
-      />
-
-      <div>
-        <button onClick={getReccomendedPlaylist}>Curate New Playlist</button>
-        <p>Create a new playlist based on your top songs using Spotify!</p>
-      </div>
-
-      {playlist && reccomendations.length > 0 && (
-        <div>
-          <h2 className="text-center">Curated Playlist</h2>
-          <ul className="list-group list-group-horizontal overflow-x-auto">
-            {reccomendations.map((track, index) => (
-              <RecommendedTrack key={index} track={track} />
-            ))}
-          </ul>
+    <Container
+      fluid
+      className="d-flex justify-content-center align-items-center"
+      style={backgroundStyle}
+    >
+      <div className="container">
+        <div className="d-flex justify-content-center">
+          <Button
+            onClick={toggleShowArtists}
+            variant="sucess"
+            className="btn-success btn btn-large"
+          >
+            View Top Songs
+          </Button>
         </div>
-      )}
-
-      <div>
-        <button onClick={chatrecc}>Use AI to curate a playlist for you!</button>
-        {aiplaylist && <AIReccomended chatlog={aiRecommendations} />}
+        {showArtists ? (
+          <div className="custom-card mt-4">
+            <div className="card-body">
+              <TopArtists accessToken={accessToken} />
+            </div>
+          </div>
+        ) : (
+          <div className="custom-card mt-4">
+            <div className="card-body">
+              <TopSongs
+                accessToken={accessToken}
+                seedTracks={seedTracks}
+                userDetails={userDetails}
+                setUserDetails={setUserDetails}
+              />
+            </div>
+          </div>
+        )}
+        <div className="text-center ">
+          <div className="d-inline-block mx-2">
+            <button onClick={chatRecc} className="btn btn-success btn-lg">
+              Use AI to curate a playlist for you!
+            </button>
+            {aiplaylist && <AIRecommended chatlog={aiRecommendations} />}
+          </div>
+          <div className="d-inline-block mx-2">
+            <button onClick={chatInsights} className="btn btn-success btn-lg">
+              Get Insights of your music taste
+            </button>
+            {aisecond && <AIInsights chatlog={aiRemarks} />}
+          </div>
+        </div>
       </div>
-
-      <div>
-        <button onClick={chatInsights}>Get Insights of your music taste</button>
-        {aisecond && <AIInsights chatlog={aiRemarks} />}
-      </div>
-    </div>
+    </Container>
   );
 };
 

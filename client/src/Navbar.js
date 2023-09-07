@@ -1,13 +1,12 @@
-// NavBar.js
 import React from "react";
 import { Link } from "react-router-dom";
 
 const NavBar = () => {
   return (
-    <nav className="navbar navbar-expand-lg navbar-light bg-light">
+    <nav className="navbar navbar-expand-lg navbar-dark bg-dark">
       <div className="container">
         <Link className="navbar-brand" to="/">
-          Your App Name
+          Spotilytics
         </Link>
         <button
           className="navbar-toggler"
@@ -27,7 +26,6 @@ const NavBar = () => {
                 Dashboard
               </Link>
             </li>
-            {/* Add more navigation links here */}
           </ul>
         </div>
       </div>

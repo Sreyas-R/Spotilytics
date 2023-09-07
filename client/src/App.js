@@ -8,11 +8,10 @@ const code = new URLSearchParams(window.location.search).get("code");
 function App() {
   return (
     <>
-      <NavBar /> {/* Add the NavBar component */}
+      <NavBar />
       <Routes>
         <Route path="/" element={<Login />} />
         <Route path="/dashboard" element={<Dashboard code={code} />} />
-        {/* Add more routes as needed */}
       </Routes>
     </>
   );
